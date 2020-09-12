@@ -43,12 +43,11 @@ var classifier = Sequential {
 
 var optimizer = SGD(for: classifier, learningRate: 0.1)
 
-let trainingProgress = TrainingProgress()
 var trainingLoop = TrainingLoop(
   training: dataset.training,
   validation: dataset.validation,
   optimizer: optimizer,
   lossFunction: softmaxCrossEntropy,
-  callbacks: [trainingProgress.update])
+  metrics: [.accuracy])
 
 try! trainingLoop.fit(&classifier, epochs: epochCount, on: device)

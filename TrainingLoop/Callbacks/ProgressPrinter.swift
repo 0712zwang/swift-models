@@ -18,10 +18,8 @@ let progressBarLength = 30
 
 /// A progress bar that displays to the console as a model trains, and as validation is performed.
 /// It hooks into a TrainingLoop via a callback method.
-public class TrainingProgress {
-  var statistics: TrainingStatistics?
-  let metrics: Set<TrainingMetrics>
-  let liveStatistics: Bool
+public class ProgressPrinter {
+  public var liveStatistics: Bool
 
   /// Initializes the progress bar with the metrics to be displayed (if any), and whether to
   /// provide a live update of training and validation metrics as they are calculated.
@@ -33,11 +31,45 @@ public class TrainingProgress {
   ///     as it is processed, or if these values should just be provided at the end of an epoch.
   ///     This has an impact on performance, due to materialization of tensors, and updating values
   ///     on every batch can reduce training speed by up to 30%.
-  public init(metrics: Set<TrainingMetrics> = [.accuracy, .loss], liveStatistics: Bool = true) {
-    self.metrics = metrics
+  public init(liveStatistics: Bool = true) {
     self.liveStatistics = liveStatistics
-    if !metrics.isEmpty {
-      statistics = TrainingStatistics(metrics: metrics)
+  }
+
+  /// The callback used to hook into the TrainingLoop. This is updated once per event.
+  ///
+  /// - Parameters:
+  ///   - loop: The TrainingLoop where an event has occurred. This can be accessed to obtain
+  ///     the last measure loss and other values.
+  ///   - event: The training or validation event that this callback is responding to.
+  public func print<L: TrainingLoopProtocol>(_ loop: inout L, event: TrainingLoopEvent) throws {
+    switch event {
+    case .epochStart:
+      guard let epochIndex = loop.epochIndex, let epochCount = loop.epochCount else {
+        return
+      }
+      Swift.print("Epoch \(epochIndex + 1)/\(epochCount)")
+    case .batchEnd:
+      guard let batchIndex = loop.batchIndex, let batchCount = loop.batchCount else {
+        return
+      }
+      let epochProgress = Float(batchIndex + 1) / Float(batchCount)
+      let progressBarComponent = progressBar(progress: epochProgress, length: progressBarLength)
+      let metricDescriptionComponent: String
+      if liveStatistics || (batchCount == (batchIndex + 1)) {
+        metricDescriptionComponent = loop.lastStatsLog!
+      } else {
+        metricDescriptionComponent = ""
+      }
+      Swift.print(
+        "\r\(batchIndex + 1)/\(batchCount) \(progressBarComponent)\(metricDescriptionComponent)",
+        terminator: ""
+      )
+      fflush(stdout)
+    case .epochEnd:
+      Swift.print("")
+    case .validationStart:
+      Swift.print("")
+    default: break
     }
   }
 
@@ -54,57 +86,5 @@ public class TrainingProgress {
       trailing = ""
     }
     return "[\(leading)\(separator)\(trailing)]"
-  }
-
-  func metricDescription() -> String {
-    var result: String = ""
-    if metrics.contains(.loss) {
-      result += " - loss: \(String(format: "%.4f", statistics!.averageLoss()))"
-    }
-    if metrics.contains(.accuracy) {
-      result += " - accuracy: \(String(format: "%.4f", statistics!.accuracy()))"
-    }
-
-    return result
-  }
-
-  /// The callback used to hook into the TrainingLoop. This is updated once per event.
-  ///
-  /// - Parameters:
-  ///   - loop: The TrainingLoop where an event has occurred. This can be accessed to obtain
-  ///     the last measure loss and other values.
-  ///   - event: The training or validation event that this callback is responding to.
-  public func update<L: TrainingLoopProtocol>(_ loop: inout L, event: TrainingLoopEvent) throws {
-    try statistics?.record(&loop, event: event)
-
-    switch event {
-    case .epochStart:
-      guard let epochIndex = loop.epochIndex, let epochCount = loop.epochCount else {
-        return
-      }
-      print("Epoch \(epochIndex + 1)/\(epochCount)")
-    case .batchEnd:
-      guard let batchIndex = loop.batchIndex, let batchCount = loop.batchCount else {
-        return
-      }
-      let epochProgress = Float(batchIndex + 1) / Float(batchCount)
-      let progressBarComponent = progressBar(progress: epochProgress, length: progressBarLength)
-      let metricDescriptionComponent: String
-      if liveStatistics || (batchCount == (batchIndex + 1)) {
-        metricDescriptionComponent = metricDescription()
-      } else {
-        metricDescriptionComponent = ""
-      }
-      print(
-        "\r\(batchIndex + 1)/\(batchCount) \(progressBarComponent)\(metricDescriptionComponent)",
-        terminator: ""
-      )
-      fflush(stdout)
-    case .epochEnd:
-      print("")
-    case .validationStart:
-      print("")
-    default: break
-    }
   }
 }
