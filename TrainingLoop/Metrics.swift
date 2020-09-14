@@ -25,7 +25,7 @@ public protocol MetricsMeasurer {
 	//associatedtype labelType
 	//associatedtype Value
 	var name: String { get set }
-	mutating func accumulate(predictions: Tensor<Float>, labels: Tensor<Int32>)
+	mutating func accumulate<Output, Target>(predictions: Output, labels: Target)
 	func measure() -> Float
 }
 
@@ -39,7 +39,11 @@ public struct AccuracyMeasurer: MetricsMeasurer {
 		self.name = name
 	}
 
-	public mutating func accumulate(predictions: Tensor<Float>, labels: Tensor<Int32>) {
+	public mutating func accumulate<Output, Target>(predictions: Output, labels: Target) {
+		guard let predictions = predictions as? Tensor<Float>, let labels = labels as? Tensor<Int32> else {
+	      fatalError(
+	      	"For accuracy measurements, the model output must be Tensor<Float>, and the labels must be Tensor<Int>.")
+	    }
 		correctGuessCount += Tensor<Int32>(predictions.argmax(squeezingAxis: 1) .== labels).sum().scalarized()
 		totalGuessCount += Int32(labels.shape[0])
 	}

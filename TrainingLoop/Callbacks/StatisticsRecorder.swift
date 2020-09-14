@@ -47,20 +47,15 @@ public class StatisticsRecorder {
       if let lastStepLoss = loop.lastStepLoss {
         accumulateLoss(lastStepLoss.scalarized())
       }
-      guard let possibleOutput = loop.lastStepOutput, 
-            let possibleTarget = loop.lastStepTarget else { return }
-      guard let output = possibleOutput as? Tensor<Float>,
-            let target = possibleTarget as? Tensor<Int32> else {
-        fatalError(
-          "For accuracy measurements, the model output must be Tensor<Float>, and the labels must be Tensor<Int>.")
-      }
-      accumulateMetrics(predictions: output, labels: target)
 
-      guard let batchIndex = loop.batchIndex, let batchCount = loop.batchCount else {
-        return
+      if let output = loop.lastStepOutput, let target = loop.lastStepTarget {
+        accumulateMetrics(predictions: output, labels: target)
       }
-      if liveStatistics || (batchCount == (batchIndex + 1)) {
-        loop.lastStatsLog = computeStats()
+      
+      if let batchIndex = loop.batchIndex, let batchCount = loop.batchCount {
+        if liveStatistics || (batchCount == (batchIndex + 1)) {
+          loop.lastStatsLog = [computeLoss()] + computeMetrics()
+        }
       }
     default:
       return
@@ -72,7 +67,7 @@ public class StatisticsRecorder {
     batchCount += 1
   }
 
-  func accumulateMetrics(predictions: Tensor<Float>, labels: Tensor<Int32>) {
+  func accumulateMetrics<Output, Target>(predictions: Output, labels: Target) {
     metricMeasurers = metricMeasurers.map { (measurer) -> MetricsMeasurer in
       var measurer = measurer
       measurer.accumulate(predictions: predictions, labels: labels) 
@@ -80,12 +75,8 @@ public class StatisticsRecorder {
     }
   }
 
-  func computeStats() -> [(String, Float)] {
-    return [("loss", computeLoss())] + computeMetrics()
-  }
-
-  func computeLoss() -> Float {
-    return totalBatchLoss / Float(batchCount)
+  func computeLoss() -> (String, Float) {
+    return ("loss", totalBatchLoss / Float(batchCount))
   }
 
   func computeMetrics() -> [(String, Float)] {
