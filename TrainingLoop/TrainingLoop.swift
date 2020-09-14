@@ -97,7 +97,7 @@ public protocol TrainingLoopProtocol {
   // MARK: - Epoch-level data
 
   /// The log for last statistics
-  var lastStatsLog: String? { get set }
+  var lastStatsLog: [(String, Float)]? { get set }
   /// The number of epochs we are currently fitting for.
   var epochCount: Int? { get set }
   /// The index of the current epoch.
@@ -208,7 +208,7 @@ where
   // MARK: - Epoch-level data
 
   /// The log for last epoch
-  public var lastStatsLog: String? = nil
+  public var lastStatsLog: [(String, Float)]? = nil
   /// The number of epochs we are currently fitting for.
   public var epochCount: Int? = nil
   /// The index of the current epoch.

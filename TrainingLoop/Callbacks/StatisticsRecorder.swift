@@ -60,7 +60,7 @@ public class StatisticsRecorder {
         return
       }
       if liveStatistics || (batchCount == (batchIndex + 1)) {
-        loop.lastStatsLog = formatLoss() + formatMetrics()
+        loop.lastStatsLog = computeStats()
       }
     default:
       return
@@ -80,16 +80,18 @@ public class StatisticsRecorder {
     }
   }
 
-  /// The current average loss, calculated from the batches seen since the previous start of
-  /// training or validation.
-  func formatLoss() -> String {
-    return " - loss: \(String(format: "%.4f", totalBatchLoss / Float(batchCount)))"
+  func computeStats() -> [(String, Float)] {
+    return [("loss", computeLoss())] + computeMetrics()
   }
 
-  func formatMetrics() -> String {
-    var result = ""
+  func computeLoss() -> Float {
+    return totalBatchLoss / Float(batchCount)
+  }
+
+  func computeMetrics() -> [(String, Float)] {
+    var result: [(String, Float)] = []
     for measurer in metricMeasurers {
-      result += " - \(measurer.name): \(String(format: "%.4f", measurer.measure()))"
+      result.append((measurer.name, measurer.measure()))
     }
     return result
   }

@@ -56,7 +56,7 @@ public class ProgressPrinter {
       let progressBarComponent = progressBar(progress: epochProgress, length: progressBarLength)
       let metricDescriptionComponent: String
       if liveStatistics || (batchCount == (batchIndex + 1)) {
-        metricDescriptionComponent = loop.lastStatsLog!
+        metricDescriptionComponent = formatStats(loop.lastStatsLog!)
       } else {
         metricDescriptionComponent = ""
       }
@@ -86,5 +86,13 @@ public class ProgressPrinter {
       trailing = ""
     }
     return "[\(leading)\(separator)\(trailing)]"
+  }
+
+  func formatStats(_ stats: [(String, Float)]) -> String {
+    var result = ""
+    for stat in stats {
+      result += " - \(stat.0): \(String(format: "%.4f", stat.1))"
+    }
+    return result
   }
 }
