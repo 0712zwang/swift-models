@@ -39,12 +39,12 @@ public func scheduleLearningRate<L: TrainingLoopProtocol>(
   }
 }
 
+let trainingProgress = TrainingProgress()
 var trainingLoop = TrainingLoop(
   training: dataset.training,
   validation: dataset.validation,
   optimizer: optimizer,
   lossFunction: softmaxCrossEntropy,
-  metrics: [.accuracy],
-  callbacks: [scheduleLearningRate])
+  callbacks: [trainingProgress.update, scheduleLearningRate])
 
 try! trainingLoop.fit(&model, epochs: 90, on: device)

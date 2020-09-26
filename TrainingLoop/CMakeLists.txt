@@ -1,10 +1,8 @@
 add_library(TrainingLoop
   LossFunctions.swift
-  Metrics.swift
   TrainingLoop.swift
-  Callbacks/StatisticsRecorder.swift
-  Callbacks/ProgressPrinter.swift
-  Callbacks/CSVLogger.swift)
+  TrainingProgress.swift
+  TrainingStatistics.swift)
 target_link_libraries(TrainingLoop PUBLIC
   ModelSupport)
 set_target_properties(TrainingLoop PROPERTIES
